@@ -1,0 +1,132 @@
+```{r}
+library(tidyverse)
+library(forcats)
+library(ggrepel)
+library(smodels)
+library(stringr)
+
+theme_set(theme_minimal()) 
+options(dplyr.summarise.inform = FALSE) 
+options(width = 77L)
+```
+
+```{r}
+business <- read_csv("/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/business.csv")
+
+crime <- read_csv("/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/crime.csv")
+
+income <-  read_csv("/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/income.csv")
+
+correlation_data <- read_csv("/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/r.csv")
+```
+
+
+```{r}
+rest_austin <- business%>%
+  filter(city == "Austin") %>%
+  mutate(categories_new = strsplit(categories, split = ","))%>%
+  unnest(cols = c(categories_new)) %>%
+  filter(categories_new == "Restaurants")
+```
+
+```{r}
+rest_final <- transform(rest_austin, zipcode = as.numeric(postal_code))
+```
+
+```{r}
+rest_crime <- rest_final %>%
+  left_join(crime, by = c("zipcode"))
+```
+
+```{r}
+rest_crime <- rest_crime %>%
+  mutate(index = 1)
+```
+
+```{r}
+rest_crime <- rest_crime %>%
+  group_by(zipcode) %>%
+  mutate(crime_num = sum(index))%>%
+  select(name, city, state, stars,is_open,latitude,longitude,categories_new,business_id, review_count,zipcode,address,crime_num)
+```
+
+```{r}
+rest_data <- unique(rest_crime)
+```
+
+```{r}
+income_final <- income%>%
+  filter(income == 1)
+```
+
+```{r}
+final <- rest_data %>%
+  left_join(income_final, by = c("zipcode"))
+
+
+write.csv(final,"/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/r.csv", row.names = FALSE)
+```
+
+```{r}
+neo4j_business <- final %>%
+  select (name, stars, is_open, categories_new, review_count, zipcode)
+
+write.csv(neo4j_business,"/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/neo4j_business.csv", row.names = FALSE)
+
+neo4j_address <- final %>%
+  select(city, state, latitude, longitude,address, zipcode)
+
+write.csv(neo4j_address,"/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/neo4j_address.csv", row.names = FALSE)
+
+neo4j_crime <- final %>%
+  select(zipcode, crime_num)
+
+write.csv(neo4j_crime,"/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/neo4j_crime.csv", row.names = FALSE)
+
+neo4j_income <- final %>%
+  select(zipcode, salary)
+
+write.csv(neo4j_income,"/Users/jack/Desktop/Graduate Study/Data Engineering Platforms/Final_project/data clean/neo4j_income.csv", row.names = FALSE)
+
+```
+
+
+#Correlation analysis
+```{r}
+cor(correlation_data$stars, correlation_data$crime_num)
+cor(correlation_data$stars, correlation_data$review_count)
+cor(correlation_data$crime_num, correlation_data$salary)
+```
+```{r}
+model <- final %>%
+  lm(stars ~ crime_num, data = .)
+summary(model)
+
+model <- final %>%
+  lm(stars ~ review_count, data = .)
+summary(model)
+
+model_var <- final %>%
+  lm(stars ~ crime_num + review_count, data = .)
+
+summary(model_var)
+```
+```{r}
+model <- final %>%
+  lm(stars ~ review_count, data = .)
+summary(model)
+```
+
+```{r}
+model_var <- final %>%
+  lm(stars ~ crime_num + review_count, data = .)
+
+summary(model_var)
+```
+
+
+
+
+
+
+

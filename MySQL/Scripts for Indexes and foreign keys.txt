@@ -1,0 +1,26 @@
+#Scripts for Indexes and Foreign Keys
+DELETE FROM yelp where ZIPCode like 'V%' OR ZIPCode ="";
+DELETE FROM yelp WHERE ZIPCode NOT IN (SELECT ZIPCode FROM unique_zip);
+
+
+ALTER TABLE yelp MODIFY COLUMN ZIPCode INT;
+ALTER TABLE yelp_business MODIFY COLUMN ZIPCode INT;
+
+CREATE INDEX income_zip_index ON income (ZIPCode);
+CREATE INDEX crime_zip_index ON crime (ZIPCode);
+CREATE INDEX yelp_zip_index ON yelp(ZIPCode);
+CREATE INDEX neighborhoods_zip_index ON neighborhoods(ZIPCode);
+CREATE INDEX unique_zip_index ON unique_zip(ZIPCode);
+CREATE INDEX yelp_business_index ON yelp_business(address_id);
+CREATE INDEX yelp_address_index ON yelp_address(address_id);
+CREATE INDEX yelp_address_ZIP ON yelp_address(ZIPCode);
+
+
+ALTER TABLE unique_zip ADD CONSTRAINT income_unique_1 FOREIGN KEY (ZIPCode) REFERENCES income(ZIPCode);
+ALTER TABLE yelp ADD CONSTRAINT yelp_unique_1 FOREIGN KEY (ZIPCode) REFERENCES unique_zip(ZIPCode);
+ALTER TABLE crime ADD CONSTRAINT crime_unique_1 FOREIGN KEY (ZIPCode) REFERENCES unique_zip(ZIPCode);
+ALTER TABLE neighborhoods ADD CONSTRAINT neighborhoods_unique_1 FOREIGN KEY (ZIPCode) REFERENCES unique_zip(ZIPCode);
+ALTER TABLE yelp_business ADD CONSTRAINT yelp_address_connect FOREIGN KEY (address_id) REFERENCES yelp_address(address_id);
+ALTER TABLE yelp_address ADD CONSTRAINT yelp_zip_1 FOREIGN KEY (ZIPCode) REFERENCES unique_zip(ZIPCode);
+
+

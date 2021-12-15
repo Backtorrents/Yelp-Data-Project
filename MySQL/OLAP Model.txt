@@ -1,0 +1,117 @@
+#Create the OLAP Model
+
+#It should be the fact data surrounded by the crime, income, business, and neighborhood data set
+DROP DATABASE IF EXISTS restaurants_star;
+Create DATABASE restaurants_star;
+
+USE restaurants_star;
+
+#DROP TABLE dimcrime;
+CREATE TABLE dimcrime (
+incident_number INT NOT NULL,
+description VARCHAR(255) NULL,
+date VARCHAR(255) NULL,
+ZIPCode INT NULL,
+PRIMARY KEY (incident_number)
+);
+
+INSERT INTO dimcrime (incident_number, description, date, ZIPCode)
+SELECT incident_number, description, date, ZIPCode FROM restaurants.crime WHERE ZIPCode IN
+(SELECT DISTINCT ZIPCode FROM restaurants.yelp_address WHERE city = "Austin");
+
+CREATE TABLE dimneighborhoods (
+Neighborhood VARCHAR(255) NULL,
+ZIPCode INT NOT NULL,
+PRIMARY KEY (ZIPCode)
+);
+
+INSERT INTO dimneighborhoods (Neighborhood, ZIPCode) SELECT Neighborhood, ZIPCode 
+FROM restaurants.neighborhoods WHERE ZIPCode IN
+(SELECT DISTINCT ZIPCode FROM restaurants.yelp_address WHERE city = "Austin");
+
+DROP TABLE dimbusiness;
+CREATE TABLE dimbusiness (
+business_id VARCHAR(255) NOT NULL,
+address_id INT,
+name VARCHAR(255) NULL,
+stars VARCHAR(255) NULL,
+is_open VARCHAR(255) NULL,
+categories VARCHAR(255) NULL,
+review_count VARCHAR(255) NULL,
+PRIMARY KEY (business_id));
+
+INSERT INTO dimbusiness 
+(business_id, address_id, name, stars, is_open, categories, review_count) 
+SELECT business_id, address_id, name, stars, is_open, categories, review_count FROM restaurants.yelp_business;
+
+
+CREATE TABLE dimaddress (
+address_id INT NOT NULL,
+city VARCHAR(255) NULL,
+state VARCHAR(255) NULL,
+latitude VARCHAR(255) NULL,
+longitude VARCHAR(255) NULL,
+ZIPCode INT NOT NULL,
+address VARCHAR(255) NULL,
+PRIMARY KEY (address_id)
+);
+#ALTER TABLE dimaddress MODIFY COLUMN ZIPCode INT NOT NULL;
+INSERT INTO dimaddress (address_id, city, state, latitude, longitude, ZIPCode, address)
+SELECT address_id, city, state, latitude, longitude, ZIPCode, address 
+FROM restaurants.yelp_address WHERE ZIPCode IN
+(SELECT DISTINCT ZIPCode FROM restaurants.yelp_address WHERE city = "Austin");
+
+#DROP Table dimincome;
+#Index_col INT NOT NULL,
+
+
+CREATE TABLE dimincome (
+Index_col INT NOT NULL AUTO_INCREMENT,
+ZIPCode INT NOT NULL,
+IncomeCategory VARCHAR(255) NULL,
+AverageSalary VARCHAR(255) NULL,
+PercentofPopulationinIncomeGroupbyZIP VARCHAR(255) NULL,
+PRIMARY KEY (Index_col)
+);
+
+INSERT INTO dimincome (ZIPCode, IncomeCategory, AverageSalary, PercentofPopulationinIncomeGroupbyZIP)
+SELECT ZIPcode, IncomeCategory, AverageSalary, PercentofPopulationinIncomeGroupbyZIP 
+FROM restaurants.income WHERE ZIPCode IN
+(SELECT DISTINCT ZIPCode FROM restaurants.yelp_address WHERE city = "Austin");
+
+
+CREATE TABLE yelp_fact (
+business_id VARCHAR(255) NOT NULL,
+address_id INT NOT NULL,
+ZIPCode INT NOT NULL,
+PRIMARY KEY (business_id)
+);
+INSERT INTO yelp_fact (business_id, address_id, ZIPCode)
+SELECT b.business_id, a.address_id, a.ZIPCode FROM restaurants.yelp_business b
+LEFT JOIN restaurants.yelp_address a ON a.address_id = b.address_id;
+
+
+#DROP TABLE dimzip;
+CREATE TABLE dimZIP (
+ZIPCode INT NOT NULL,
+PRIMARY KEY (ZIPCode)
+);
+SELECT * FROM dimZIP;
+INSERT INTO restaurants_star.dimzip (ZIPCode) SELECT ZIPCode FROM restaurants.unique_zip;
+
+
+CREATE INDEX income_zip_ind ON dimincome (ZIPCode);
+CREATE INDEX crime_zip_ind ON dimcrime (ZIPCode);
+CREATE INDEX yelp_zip_ind ON yelp_fact(ZIPCode);
+CREATE INDEX neighborhoods_zip_ind ON dimneighborhoods(ZIPCode);
+CREATE INDEX yelp_business_ind ON dimbusiness(address_id);
+
+
+
+ALTER TABLE dimcrime ADD CONSTRAINT crime_1 FOREIGN KEY (ZIPCode) REFERENCES yelp_fact(ZIPCode);
+ALTER TABLE dimneighborhoods ADD CONSTRAINT neighborhoods_1 FOREIGN KEY (ZIPCode) REFERENCES yelp_fact(ZIPCode);
+ALTER TABLE dimbusiness ADD CONSTRAINT address_connect FOREIGN KEY (address_id) REFERENCES dimaddress(address_id);
+ALTER TABLE dimaddress ADD CONSTRAINT yelp_zip_1 FOREIGN KEY (ZIPCode) REFERENCES yelp_fact(ZIPCode);
+ALTER TABLE dimincome ADD CONSTRAINT income_1 FOREIGN KEY (ZIPCode) REFERENCES yelp_fact(ZIPCode);
+
+

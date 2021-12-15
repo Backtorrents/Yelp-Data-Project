@@ -1,0 +1,57 @@
+#Splitting Yelp up into three tables
+#ingest rest, drop column, add new, change split, change foreign keys, add index
+
+#Ingest the yelp data into MySQL using File Wizard 
+SELECT * FROM yelp;
+SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = "yelp";
+#Alter the table to create address_id as an auto_increment as Primary KEY
+#ALTER TABLE yelp RENAME COLUMN postal_code TO ZIPCode;
+#ALTER TABLE yelp MODIFY COLUMN
+
+
+
+USE restaurants;
+#DROP TABLE yelp;
+ALTER TABLE yelp ADD COLUMN address_id INT NOT NULL;
+ALTER TABLE yelp MODIFY address_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY;
+DELETE FROM yelp WHERE business_id = "#NAME?";
+DELETE FROM yelp WHERE postal_code = "NA";
+DELETE FROM yelp WHERE postal_code NOT IN (SELECT ZIPCode FROM unique_zip);
+
+
+
+
+
+DROP TABLE IF EXISTS yelp_business;
+DROP TABLE IF EXISTS yelp_address;
+
+CREATE TABLE yelp_business (
+business_id VARCHAR(255) NOT NULL,
+address_id INT NOT NULL,
+name VARCHAR(255) NULL,
+stars VARCHAR(255) NULL,
+is_open VARCHAR(255) NULL,
+categories VARCHAR(255) NULL,
+review_count VARCHAR(255) NULL,
+PRIMARY KEY (business_id));
+
+INSERT INTO yelp_business 
+(business_id, address_id, name, stars, is_open, categories, review_count) 
+SELECT DISTINCT business_id, address_id, name, stars, is_open, categories, review_count 
+FROM yelp;
+
+CREATE TABLE yelp_address (
+address_id INT NOT NULL,
+city VARCHAR(255) NULL,
+state VARCHAR(255) NULL,
+latitude VARCHAR(255) NULL,
+longitude VARCHAR(255) NULL,
+ZIPCode INT NOT NULL,
+address VARCHAR(255) NULL,
+PRIMARY KEY (address_id)
+);
+
+INSERT INTO yelp_address (address_id, city, state, latitude, longitude, ZIPCode, address)
+SELECT address_id, city, state, latitude, longitude, postal_code, address FROM yelp;
+
+DROP TABLE IF EXISTS yelp;
